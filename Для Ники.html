@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Нике</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06141c;--bg2:#0d2a36;--ink:#e8f4f3;--mute:#8fb3b8;--teal:#34d1bf;--coral:#ff6f8e;--gold:#ffd27a;--line:#1f4653}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);text-align:center;
+ background:radial-gradient(120% 80% at 50% 110%,#13495a 0%,var(--bg2) 35%,var(--bg) 70%);
+ overflow:hidden;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.screen{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.hidden{display:none!important}
+h1,h2,h3{font-family:'Unbounded',sans-serif;font-weight:600;line-height:1.2;margin:0 0 .6em}
+h1{font-size:clamp(1.9rem,6vw,3.2rem)}
+h2{font-size:clamp(1.3rem,4vw,2rem)}
+h3{font-size:clamp(1.05rem,3vw,1.35rem);font-weight:400}
+p{font-size:1.1rem;color:var(--mute);max-width:34ch;line-height:1.55;margin:0 0 1.4em}
+button{font:600 1rem 'Manrope',sans-serif;background:var(--teal);color:#042029;border:0;border-radius:999px;padding:14px 30px;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 0 0 0 rgba(52,209,191,.5)}
+button:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(52,209,191,.35)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+/* keys tracker */
+.keys{position:fixed;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:10px}
+.key{width:46px;height:46px;display:grid;place-items:center;font-size:1.4rem;border:1.5px dashed var(--line);border-radius:50%;filter:grayscale(1) opacity(.35);transition:all .8s}
+.key.found{filter:none;border:1.5px solid var(--gold);box-shadow:0 0 18px rgba(255,210,122,.6);transform:scale(1.1)}
+/* stage 1 */
+#field{position:relative;width:min(92vw,760px);height:58vh}
+.star{position:absolute;transform:translate(-50%,-50%);background:none;border:0;padding:8px;color:var(--gold);font-size:1.6rem;cursor:pointer;animation:tw 2.4s ease-in-out infinite alternate;transition:opacity .5s}
+.star:hover{transform:translate(-50%,-50%) scale(1.3);box-shadow:none}
+.star.gone{opacity:0;pointer-events:none}
+.star.key{font-size:3rem;animation:none;filter:drop-shadow(0 0 14px var(--gold))}
+@keyframes tw{from{opacity:.35;scale:.85}to{opacity:1;scale:1.1}}
+/* stage 2 */
+#scramble{font-family:'Unbounded',sans-serif;font-size:clamp(1.6rem,6vw,2.6rem);letter-spacing:.35em;color:var(--coral);margin:.3em 0 1em;text-transform:uppercase;padding-left:.35em}
+input{font:1.1rem 'Manrope',sans-serif;color:var(--ink);background:rgba(255,255,255,.06);border:1.5px solid var(--line);border-radius:14px;padding:14px 18px;width:min(86vw,340px);text-align:center;margin-bottom:16px}
+input::placeholder{color:#5f858b}
+input:focus{outline:none;border-color:var(--teal)}
+/* stage 3 */
+.opts{display:flex;flex-direction:column;gap:10px;width:min(90vw,520px);margin:18px 0}
+.opt{background:rgba(255,255,255,.05);color:var(--ink);border:1.5px solid var(--line);border-radius:14px;padding:15px 18px;font-weight:600;box-shadow:none}
+.opt:hover{border-color:var(--teal);background:rgba(52,209,191,.12);box-shadow:none;transform:none}
+.opt.bad{border-color:var(--coral);animation:shake .35s}
+@keyframes shake{25%{translate:-6px}75%{translate:6px}}
+.dots{display:flex;gap:10px;justify-content:center}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--line);transition:.3s}
+.dot.ok{background:var(--teal);box-shadow:0 0 10px var(--teal)}
+/* toast */
+.toast{position:fixed;left:50%;bottom:max(60px,10vh);transform:translateX(-50%);z-index:20;background:var(--ink);color:#06141c;font-weight:600;border-radius:999px;padding:12px 22px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+/* final */
+#orb{font-size:4.5rem;background:none;border:0;padding:0;cursor:pointer;animation:pulse 1.6s ease-in-out infinite;box-shadow:none;filter:drop-shadow(0 0 24px rgba(255,111,142,.7))}
+#orb:hover{box-shadow:none}
+@keyframes pulse{50%{transform:scale(1.12)}}
+#orbHint{margin-top:18px}
+#love{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity 1.6s;pointer-events:none;padding:24px}
+#love.on{opacity:1}
+#love h1{font-size:clamp(2.2rem,9vw,4.6rem);color:var(--ink);text-shadow:0 0 40px rgba(255,111,142,.6);margin:0}
+.floaty{position:fixed;bottom:-30px;z-index:2;animation:rise linear forwards;pointer-events:none}
+@keyframes rise{to{transform:translateY(-110vh) rotate(25deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+
+<div class="keys" aria-label="Ключи">
+  <span class="key" id="key1">🔑</span><span class="key" id="key2">🔑</span><span class="key" id="key3">🔑</span>
+</div>
+
+<main class="screen" id="welcome">
+  <h1>Ника</h1>
+  <p>Я спрятала сообщение. Чтобы открыть его, нужно найти три ключа.</p>
+  <button id="start">Искат</button>
+</main>
+
+<main class="screen hidden" id="stage1">
+  <h2>Ключ первый: найди его среди звёзд</h2>
+  <div id="field"></div>
+</main>
+
+<main class="screen hidden" id="stage2">
+  <h2>Ключ второй: собери слово</h2>
+  <div id="scramble"></div>
+  <input id="answer" type="text" placeholder="Какое это слово?" autocomplete="off">
+  <button id="check">Проверит</button>
+</main>
+
+<main class="screen hidden" id="stage3">
+  <h2>три вопроса</h2>
+  <div id="quiz"></div>
+</main>
+
+<main class="screen hidden" id="final">
+  <button id="orb" aria-label="Открыть сообщение">💌</button>
+  <p id="orbHint">Ты нашла все ключи. Нажми, чтобы открыть.</p>
+  <div id="love"><h1>Ника,<br>я тепя люплю</h1></div>
+</main>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+/* ====== ЗДЕСЬ МОЖНО ПОМЕНЯТЬ ТЕКСТЫ ====== */
+const STAR_COUNT = 24;
+const WORDS = ["магдональс","трамп","фигма","бигимот"];
+const QUESTIONS = [
+  {q:"Как часто я о тепе думаю?", o:["Никада","Када ты пишешь","Иногда","Пастаяна"], a:"Пастаяна"},
+  {q:"Скока будет 12 в степени 2?", o:["122","144","24","168"], a:"144"},
+  {q:"Что мне нравится в тепе больше всего?", o:["Шутги","Причоска","Всё сразу","Заботливость"], a:"Всё сразу"}
+];
+/* ========================================= */
+
+const $ = id => document.getElementById(id);
+let qi = 0, ok = 0;
+
+/* night sky */
+const cv = $('sky'), cx = cv.getContext('2d');
+let stars = [];
+function sizeSky(){cv.width=innerWidth;cv.height=innerHeight;
+  stars=Array.from({length:110},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.4+.3,p:Math.random()*6}))}
+addEventListener('resize',sizeSky);sizeSky();
+let bursts=[];
+function loop(t){
+  cx.clearRect(0,0,cv.width,cv.height);
+  for(const s of stars){cx.globalAlpha=.35+.5*Math.abs(Math.sin(t/1200+s.p));cx.fillStyle='#e8f4f3';cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);cx.fill()}
+  for(const b of bursts){
+    b.ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.03;p.vx*=.985;p.vy*=.985});
+    b.life-=.012;
+    cx.globalAlpha=Math.max(b.life,0);
+    b.ps.forEach(p=>{cx.fillStyle=b.c;cx.beginPath();cx.arc(p.x,p.y,2.2,0,7);cx.fill()});
+  }
+  bursts=bursts.filter(b=>b.life>0);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+function firework(){
+  const cols=['#34d1bf','#ff6f8e','#ffd27a','#e8f4f3'];
+  for(let k=0;k<7;k++)setTimeout(()=>{
+    const x=cv.width*(.15+Math.random()*.7),y=cv.height*(.15+Math.random()*.4),c=cols[k%4];
+    bursts.push({c,life:1,ps:Array.from({length:60},(_,i)=>{const a=i/60*6.283,s=1.5+Math.random()*3;return{x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s}})});
+  },k*350);
+}
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.add('hidden'),900)}
+function go(from,to){$(from).classList.add('hidden');$(to).classList.remove('hidden')}
+
+/* stage 1 */
+$('start').onclick=()=>{go('welcome','stage1');setupStage1()};
+function setupStage1(){
+  const f=$('field');f.innerHTML='';
+  const win=Math.floor(Math.random()*STAR_COUNT);
+  for(let i=0;i<STAR_COUNT;i++){
+    const b=document.createElement('button');
+    b.className='star';b.textContent='✦';b.setAttribute('aria-label','Звезда');
+    b.style.left=(5+Math.random()*90)+'%';b.style.top=(5+Math.random()*90)+'%';
+    b.style.animationDelay=(-Math.random()*2.4)+'s';
+    b.onclick=()=>{
+      if(i===win){
+        b.textContent='🔑';b.classList.add('key');toast('Ты нашла ключ');
+        $('key1').classList.add('found');
+        f.querySelectorAll('.star').forEach(s=>{if(s!==b)s.classList.add('gone')});
+        setTimeout(()=>{go('stage1','stage2');setupStage2()},1500);
+      }else{b.classList.add('gone');toast('Здесь пусто')}
+    };
+    f.appendChild(b);
+  }
+}
+
+/* stage 2 */
+let word='';
+function shuffle(s){const a=[...s];do{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}while(a.join('')===s);return a.join('')}
+function setupStage2(){
+  word=WORDS[Math.floor(Math.random()*WORDS.length)];
+  $('scramble').textContent=shuffle(word);
+  $('answer').value='';$('answer').focus();
+}
+function checkWord(){
+  if($('answer').value.trim().toLowerCase()===word.toLowerCase()){
+    toast('Верно');$('key2').classList.add('found');
+    setTimeout(()=>{go('stage2','stage3');showQ()},1000);
+  }else toast('Не то слово. Попробуй ещё');
+}
+$('check').onclick=checkWord;
+$('answer').addEventListener('keydown',e=>{if(e.key==='Enter')checkWord()});
+
+/* stage 3 */
+function showQ(){
+  const q=QUESTIONS[qi],box=$('quiz');
+  box.innerHTML='';
+  const h=document.createElement('h3');h.textContent=q.q;box.appendChild(h);
+  const w=document.createElement('div');w.className='opts';
+  q.o.forEach(o=>{
+    const b=document.createElement('button');b.className='opt';b.textContent=o;
+    b.onclick=()=>answer(o,b);w.appendChild(b);
+  });
+  box.appendChild(w);
+  const d=document.createElement('div');d.className='dots';
+  QUESTIONS.forEach((_,i)=>{const s=document.createElement('span');s.className='dot'+(i<ok?' ok':'');d.appendChild(s)});
+  box.appendChild(d);
+}
+function answer(o,btn){
+  if(o===QUESTIONS[qi].a){
+    ok++;toast('Правильно');
+    if(ok===QUESTIONS.length){
+      $('key3').classList.add('found');firework();
+      setTimeout(()=>go('stage3','final'),2200);
+    }else{qi++;setTimeout(showQ,700)}
+  }else{btn.classList.add('bad');toast('Почти. Попробуй другой ответ')}
+}
+
+/* final */
+$('orb').onclick=()=>{
+  $('orb').classList.add('hidden');$('orbHint').classList.add('hidden');
+  firework();
+  $('love').classList.add('on');
+  const em=['💗','✨','💙','⭐'];
+  for(let i=0;i<26;i++){
+    const s=document.createElement('span');s.className='floaty';s.textContent=em[i%4];
+    s.style.left=Math.random()*100+'vw';s.style.fontSize=(16+Math.random()*22)+'px';
+    s.style.animationDuration=(5+Math.random()*5)+'s';s.style.animationDelay=(Math.random()*3)+'s';
+    document.body.appendChild(s);
+  }
+};
+</script>
+</body>
+</html>
